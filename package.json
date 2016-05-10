@@ -1,0 +1,35 @@
+{
+  "name": "css-extract-block-webpack-plugin",
+  "version": "1.0.0-beta.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "rm -rf output && webpack && mocha test.js"
+  },
+  "author": "Matt Hinchliffe",
+  "keywords": [
+    "webpack"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:i-like-robots/css-extract-block-webpack-plugin.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "css": "^2.2.1",
+    "line-column": "^1.0.2",
+    "source-map": "^0.5.6"
+  },
+  "devDependencies": {
+    "css-loader": "^0.23.1",
+    "extract-text-webpack-plugin": "^1.0.1",
+    "mocha": "^2.4.5",
+    "node-sass": "^3.7.0",
+    "sass-loader": "^3.2.0",
+    "style-loader": "^0.13.1",
+    "webpack": "^1.13.0"
+  },
+  "engines": {
+    "node": ">=4.2.6"
+  }
+}
