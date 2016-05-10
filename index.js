@@ -17,15 +17,13 @@ class Block {
   }
 
   add (css, mapping) {
-    if (mapping && mapping.line) {
-      const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
+    const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
 
-      this.map.addMapping({
-        source: mapping.source,
-        generated: { line: position.line, column: position.col },
-        original: { line: mapping.line, column: mapping.column }
-      })
-    }
+    this.map.addMapping({
+      source: mapping.source,
+      generated: { line: position.line, column: position.col },
+      original: { line: mapping.line, column: mapping.column }
+    })
 
     this.css += css
   }
@@ -91,7 +89,7 @@ module.exports = function () {
         )
 
         context.add(raw, mapping)
-      });
+      })
 
       if (stack.length === 1) {
         complete.push(stack.pop())

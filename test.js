@@ -1,13 +1,11 @@
 'use strict'
 
 const fs = require('fs')
-const mocha = require('mocha')
 const assert = require('assert')
+const sourceMap = require('source-map')
 
 describe('Extract css block plugin', () => {
-
   describe('file creation', () => {
-
     it('creates a css file for each extract', () => {
       assert.ok(fs.statSync('./output/main.css'))
       assert.ok(fs.statSync('./output/departures.css'))
@@ -19,11 +17,9 @@ describe('Extract css block plugin', () => {
       assert.ok(fs.statSync('./output/departures.css.map'))
       assert.ok(fs.statSync('./output/trains.css.map'))
     })
-
   })
 
   describe('output styles', () => {
-
     it('removes block pragmas', () => {
       const result = fs.readFileSync('./output/main.css').toString()
 
@@ -51,14 +47,13 @@ describe('Extract css block plugin', () => {
       assert.ok(/^\.departures \{/.test(result1))
       assert.ok(/^\.trains \{/.test(result2))
     })
-
   })
 
   describe('source maps', () => {
-    const result1 = new require('source-map').SourceMapConsumer(
+    const result1 = new sourceMap.SourceMapConsumer(
       fs.readFileSync('./output/departures.css.map').toString()
     )
-    const result2 = new require('source-map').SourceMapConsumer(
+    const result2 = new sourceMap.SourceMapConsumer(
       fs.readFileSync('./output/main.css.map').toString()
     )
 
@@ -116,5 +111,4 @@ describe('Extract css block plugin', () => {
       assert.equal(result2.sourcesContent.length, 3)
     })
   })
-
 })
