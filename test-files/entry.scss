@@ -1,39 +1,6 @@
 $breakpoints: ( 'medium': 800px, 'large': 1200px );
 
-//
-// Normalise elements
-//
-html {
-  -ms-text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  margin: 0;
-}
-
-legend,
-fieldset {
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-
-button,
-select {
-  font: inherit;
-  text-transform: none;
-}
-
-button {
-  overflow: visible;
-
-  &::-moz-focus-inner {
-    border: 0;
-    padding: 0;
-  }
-
-}
+@import 'normalize';
 
 //
 // Typography

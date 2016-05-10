@@ -5,8 +5,8 @@ const sourceMap = require('source-map')
 const cssParser = require('css')
 const lineColumn = require('line-column')
 
-const DELIMITER = /^!\s?(start|end):([\w_-]+.css)\s?$/
-const SOURCEMAP = /^# sourceMappingURL=/
+const DELIMITER = /^!\s?(start|end):([\w_-]+\.css)\s?$/
+const SOURCEMAP = /^# sourceMappingURL=[\w_-]+\.css\.map/
 
 class Block {
   constructor (file) {
@@ -17,27 +17,17 @@ class Block {
   }
 
   add (css, mapping) {
-    if (mapping.start.line) {
+    if (mapping && mapping.line) {
       const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
 
       this.map.addMapping({
-        source: mapping.start.source,
+        source: mapping.source,
         generated: { line: position.line, column: position.col },
-        original: { line: mapping.start.line, column: mapping.start.column }
+        original: { line: mapping.line, column: mapping.column }
       })
     }
 
     this.css += css
-
-    if (mapping.end.line) {
-      const position = lineColumn(this.css, this.css.length - 1)
-
-      this.map.addMapping({
-        source: mapping.end.source,
-        generated: { line: position.line, column: position.col },
-        original: { line: mapping.end.line, column: mapping.end.column }
-      })
-    }
   }
 
   stringify () {
@@ -93,10 +83,7 @@ module.exports = function () {
           return
         }
 
-        const mapping = {
-          start: oldMap.originalPositionFor(rule.position.start),
-          end: oldMap.originalPositionFor(rule.position.end)
-        }
+        const mapping = oldMap.originalPositionFor(rule.position.start)
 
         const raw = css.slice(
           lineColumn(css).toIndex(rule.position.start),
@@ -104,8 +91,6 @@ module.exports = function () {
         )
 
         context.add(raw, mapping)
-
-
       });
 
       if (stack.length === 1) {

@@ -5,7 +5,7 @@ const ExtractTextPlugin = require('extract-text-webpack-plugin')
 
 module.exports = {
   entry: {
-    './output/main.css': './test.scss'
+    './output/main.css': './test-files/entry.scss'
   },
   output: {
     filename: '[name]'

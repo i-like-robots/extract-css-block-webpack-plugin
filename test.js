@@ -68,34 +68,52 @@ describe('Extract css block plugin', () => {
     })
 
     it('translates new positions to the original', () => {
-      // .departures
-      const original1 = result1.originalPositionFor({ line: 1, column: 0 })
+      let original
 
-      // .notice--loading
-      const original2 = result2.originalPositionFor({ line: 131, column: 27 })
+      // departures.css > .departures {}
+      original = result1.originalPositionFor({ line: 1, column: 0 })
 
-      assert.equal(original1.line, 310)
-      assert.equal(original2.line, 398)
+      assert.equal(original.line, 277)
+      assert.equal(original.column, 0)
+
+      // departures.css > .departures__heading {}
+      original = result1.originalPositionFor({ line: 2, column: 19 })
+
+      assert.equal(original.line, 281)
+      assert.equal(original.column, 0)
+
+      // main.css > .notice--loading {}
+      original = result2.originalPositionFor({ line: 131, column: 26 })
+
+      assert.equal(original.line, 367)
+      assert.equal(original.column, 0)
     })
 
     it('translates original positions to the new', () => {
-      // .departures__heading
-      const generated1 = result1.generatedPositionFor({
-        line: 314, column: 0, source: result1.sources[0]
-      })
+      let generated
 
-      // .network__line--piccadilly
-      const generated2 = result2.generatedPositionFor({
-        line: 218, column: 0, source: result2.sources[0]
-      })
+      // entry.scss > .departures
+      generated = result1.generatedPositionFor({ line: 277, column: 0, source: result1.sources[0] })
 
-      assert.equal(generated1.line, 2)
-      assert.equal(generated2.line, 88)
+      assert.equal(generated.line, 1)
+      assert.equal(generated.column, 0)
+
+      // entry.scss > .network__line--piccadilly
+      generated = result2.generatedPositionFor({ line: 185, column: 0, source: result2.sources[2] })
+
+      assert.equal(generated.line, 88)
+      assert.equal(generated.column, 28)
+
+      // normalize.scss > body
+      generated = result2.generatedPositionFor({ line: 6, column: 0, source: result2.sources[1] })
+
+      assert.equal(generated.line, 3)
+      assert.equal(generated.column, 35)
     })
 
     it('includes source content from the original source map', () => {
       assert.equal(result1.sourcesContent.length, 1)
-      assert.equal(result2.sourcesContent.length, 1)
+      assert.equal(result2.sourcesContent.length, 3)
     })
   })
 
