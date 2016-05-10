@@ -1,4 +1,4 @@
-# Extract CSS block plugin for webpack
+# Extract CSS block plugin for webpack ![Build status](https://api.travis-ci.org/i-like-robots/extract-css-block-webpack-plugin.png)
 
 I'll admit, it's not a catchy name.
 
