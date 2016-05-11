@@ -16,7 +16,7 @@ class Block {
   }
 
   add (css, mapping) {
-    if (mapping) {
+    if (mapping && mapping.source) {
       this.handleMapping(mapping)
     }
 
@@ -24,9 +24,7 @@ class Block {
   }
 
   handleMapping (mapping) {
-    if (this.map === undefined) {
-      this.map = new sourceMap.SourceMapGenerator({ file: this.file })
-    }
+    this.map = this.map || new sourceMap.SourceMapGenerator({ file: this.file })
 
     const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
 
@@ -42,7 +40,7 @@ class Block {
 
     return {
       css: `${this.css}\n${this.map ? pragma : ''}`,
-      map: this.map && this.map.toString()
+      map: this.map ? this.map.toString() : ''
     }
   }
 }
