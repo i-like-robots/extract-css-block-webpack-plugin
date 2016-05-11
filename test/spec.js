@@ -8,122 +8,164 @@ const config = require('./fixture/config')
 describe('Extract css block plugin', () => {
   let stats
 
-  before((done) => {
-    webpack(config.with).run((err, result) => {
-      stats = result
-      done(err)
+  context('without source maps', () => {
+    before((done) => {
+      webpack(config.without).run((err, result) => {
+        stats = result
+        done(err)
+      })
+    })
+
+    describe('file creation', () => {
+      it('creates a css file for each extract', () => {
+        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css'))
+        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css'))
+        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css'))
+      })
+
+      it('does not create any map files for extracts', () => {
+        assert.equal(stats.compilation.assets.hasOwnProperty('./test/output/main.css.map'), false)
+        assert.equal(stats.compilation.assets.hasOwnProperty('./test/output/departures.css.map'), false)
+        assert.equal(stats.compilation.assets.hasOwnProperty('./test/output/trains.css.map'), false)
+      })
+    })
+
+    describe('output styles', () => {
+      it('removes block pragmas', () => {
+        const result = stats.compilation.assets['./test/output/main.css'].source()
+
+        assert.equal(/\*! start:[\w]+\.css \*/.test(result), false)
+        assert.equal(/\*! end:[\w]+\.css \*/.test(result), false)
+      })
+
+      it('extracts the contents of the block pragmas', () => {
+        const result1 = stats.compilation.assets['./test/output/departures.css'].source()
+        const result2 = stats.compilation.assets['./test/output/trains.css'].source()
+
+        assert.ok(/^\.departures \{/.test(result1))
+        assert.ok(/^\.trains \{/.test(result2))
+      })
+
+      it('removes any sourcemap pragmas', () => {
+        const result = stats.compilation.assets['./test/output/main.css'].source()
+        assert.equal(result.match(/sourceMappingURL/g), null)
+      })
     })
   })
 
-  describe('file creation', () => {
-    it('creates a css file for each extract', () => {
-      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css'))
-      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css'))
-      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css'))
+  context('with source maps', () => {
+    before((done) => {
+      webpack(config.with).run((err, result) => {
+        stats = result
+        done(err)
+      })
     })
 
-    it('creates a map file for each extract', () => {
-      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css.map'))
-      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css.map'))
-      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css.map'))
-    })
-  })
-
-  describe('output styles', () => {
-    it('removes block pragmas', () => {
-      const result = stats.compilation.assets['./test/output/main.css'].source()
-
-      assert.equal(/\*! start:[\w]+\.css \*/.test(result), false)
-      assert.equal(/\*! end:[\w]+\.css \*/.test(result), false)
+    describe('file creation', () => {
+      it('creates a map file for each extract', () => {
+        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css.map'))
+        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css.map'))
+        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css.map'))
+      })
     })
 
-    it('removes original sourcemap pragmas', () => {
-      const result = stats.compilation.assets['./test/output/main.css'].source()
-      assert.equal(result.match(/sourceMappingURL/g).length, 1)
+    describe('output styles', () => {
+      it('appends new sourcemap pragmas to each extract', () => {
+        const result1 = stats.compilation.assets['./test/output/main.css'].source()
+        const result2 = stats.compilation.assets['./test/output/departures.css'].source()
+        const result3 = stats.compilation.assets['./test/output/trains.css'].source()
+
+        assert.equal(result1.match(/sourceMappingURL/g).length, 1)
+        assert.equal(result2.match(/sourceMappingURL/g).length, 1)
+        assert.equal(result3.match(/sourceMappingURL/g).length, 1)
+      })
     })
 
-    it('appends new sourcemap pragmas to each extract', () => {
-      const result1 = stats.compilation.assets['./test/output/departures.css'].source()
-      const result2 = stats.compilation.assets['./test/output/trains.css'].source()
+    describe('source maps', () => {
+      let result1
+      let result2
+      let result3
 
-      assert.equal(result1.match(/sourceMappingURL/g).length, 1)
-      assert.equal(result2.match(/sourceMappingURL/g).length, 1)
-    })
+      before(() => {
+        result1 = new sourceMap.SourceMapConsumer(
+          stats.compilation.assets['./test/output/main.css.map'].source()
+        )
+        result2 = new sourceMap.SourceMapConsumer(
+          stats.compilation.assets['./test/output/departures.css.map'].source()
+        )
+        result3 = new sourceMap.SourceMapConsumer(
+          stats.compilation.assets['./test/output/trains.css.map'].source()
+        )
+      })
 
-    it('extracts the contents of the block pragmas', () => {
-      const result1 = stats.compilation.assets['./test/output/departures.css'].source()
-      const result2 = stats.compilation.assets['./test/output/trains.css'].source()
+      it('associates each source map with a stylesheet', () => {
+        assert.equal(result1.file, './test/output/main.css')
+        assert.equal(result2.file, './test/output/departures.css')
+        assert.equal(result3.file, './test/output/trains.css')
+      })
 
-      assert.ok(/^\.departures \{/.test(result1))
-      assert.ok(/^\.trains \{/.test(result2))
-    })
-  })
+      it('translates new positions to the original', () => {
+        let original
 
-  describe('source maps', () => {
-    let result1
-    let result2
+        // main.css > .notice--loading {}
+        original = result1.originalPositionFor({ line: 131, column: 26 })
 
-    before(() => {
-      result1 = new sourceMap.SourceMapConsumer(
-        stats.compilation.assets['./test/output/departures.css.map'].source()
-      )
-      result2 = new sourceMap.SourceMapConsumer(
-        stats.compilation.assets['./test/output/main.css.map'].source()
-      )
-    })
+        assert.equal(original.line, 367)
+        assert.equal(original.column, 0)
 
-    it('associates each source map with a stylesheet', () => {
-      assert.equal(result1.file, './test/output/departures.css')
-      assert.equal(result2.file, './test/output/main.css')
-    })
+        // departures.css > .departures {}
+        original = result2.originalPositionFor({ line: 1, column: 0 })
 
-    it('translates new positions to the original', () => {
-      let original
+        assert.equal(original.line, 277)
+        assert.equal(original.column, 0)
 
-      // departures.css > .departures {}
-      original = result1.originalPositionFor({ line: 1, column: 0 })
+        // departures.css > .departures__heading {}
+        original = result2.originalPositionFor({ line: 2, column: 19 })
 
-      assert.equal(original.line, 277)
-      assert.equal(original.column, 0)
+        assert.equal(original.line, 281)
+        assert.equal(original.column, 0)
+        assert.equal(original.column, 0)
 
-      // departures.css > .departures__heading {}
-      original = result1.originalPositionFor({ line: 2, column: 19 })
+        // trains.css > .trains {}
+        original = result3.originalPositionFor({ line: 1, column: 0 })
 
-      assert.equal(original.line, 281)
-      assert.equal(original.column, 0)
+        assert.equal(original.line, 309)
+        assert.equal(original.column, 0)
+      })
 
-      // main.css > .notice--loading {}
-      original = result2.originalPositionFor({ line: 131, column: 26 })
+      it('translates original positions to the new', () => {
+        let generated
 
-      assert.equal(original.line, 367)
-      assert.equal(original.column, 0)
-    })
+        // entry.scss > .network__line--piccadilly
+        generated = result1.generatedPositionFor({ line: 185, column: 0, source: result1.sources[2] })
 
-    it('translates original positions to the new', () => {
-      let generated
+        assert.equal(generated.line, 88)
+        assert.equal(generated.column, 28)
 
-      // entry.scss > .departures
-      generated = result1.generatedPositionFor({ line: 277, column: 0, source: result1.sources[0] })
+        // normalize.scss > body
+        generated = result1.generatedPositionFor({ line: 6, column: 0, source: result1.sources[1] })
 
-      assert.equal(generated.line, 1)
-      assert.equal(generated.column, 0)
+        assert.equal(generated.line, 3)
+        assert.equal(generated.column, 35)
 
-      // entry.scss > .network__line--piccadilly
-      generated = result2.generatedPositionFor({ line: 185, column: 0, source: result2.sources[2] })
+        // entry.scss > .departures
+        generated = result2.generatedPositionFor({ line: 277, column: 0, source: result2.sources[0] })
 
-      assert.equal(generated.line, 88)
-      assert.equal(generated.column, 28)
+        assert.equal(generated.line, 1)
+        assert.equal(generated.column, 0)
 
-      // normalize.scss > body
-      generated = result2.generatedPositionFor({ line: 6, column: 0, source: result2.sources[1] })
+        // entry.scss > .trains
+        generated = result3.generatedPositionFor({ line: 309, column: 0, source: result3.sources[0] })
 
-      assert.equal(generated.line, 3)
-      assert.equal(generated.column, 35)
-    })
+        assert.equal(generated.line, 1)
+        assert.equal(generated.column, 0)
+      })
 
-    it('includes source content from the original source map', () => {
-      assert.equal(result1.sourcesContent.length, 1)
-      assert.equal(result2.sourcesContent.length, 3)
+      it('includes source content from the original source map', () => {
+        assert.equal(result1.sourcesContent.length, 3)
+        assert.equal(result2.sourcesContent.length, 1)
+        assert.equal(result3.sourcesContent.length, 1)
+      })
     })
   })
 })
