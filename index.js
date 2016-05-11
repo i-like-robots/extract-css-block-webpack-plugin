@@ -13,25 +13,36 @@ class Block {
     this.file = file
     this.name = path.basename(file)
     this.css = ''
-    this.map = new sourceMap.SourceMapGenerator({ file })
   }
 
   add (css, mapping) {
-    const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
-
-    mapping && this.map.addMapping({
-      source: mapping.source,
-      generated: { line: position.line, column: position.col },
-      original: { line: mapping.line, column: mapping.column }
-    })
+    if (mapping) {
+      this.handleMapping(mapping)
+    }
 
     this.css += css
   }
 
+  handleMapping (mapping) {
+    if (this.map === undefined) {
+      this.map = new sourceMap.SourceMapGenerator({ file: this.file })
+    }
+
+    const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
+
+    this.map.addMapping({
+      source: mapping.source,
+      generated: { line: position.line, column: position.col },
+      original: { line: mapping.line, column: mapping.column }
+    })
+  }
+
   stringify () {
+    const pragma = `/*# sourceMappingURL=${this.name}.map*/\n`
+
     return {
-      css: `${this.css}\n/*# sourceMappingURL=${this.name}.map*/`,
-      map: this.map.toString()
+      css: `${this.css}\n${this.map ? pragma : ''}`,
+      map: this.map && this.map.toString()
     }
   }
 }
@@ -61,18 +72,18 @@ function apply (compiler) {
     files.forEach(file => {
       const hasMap = compilation.assets.hasOwnProperty(file + '.map')
 
-      const css = compilation.assets[file].source()
-      const map = hasMap && compilation.assets[file + '.map'].source()
+      const rawCss = compilation.assets[file].source()
+      const rawMap = hasMap && compilation.assets[file + '.map'].source()
 
-      const oldCss = cssParser.parse(css)
-      const oldMap = hasMap && sourceMap.SourceMapConsumer(map)
+      const parsedCss = cssParser.parse(rawCss)
+      const parsedMap = hasMap && sourceMap.SourceMapConsumer(rawMap)
 
       let context = new Block(file)
 
       const complete = []
       const stack = [ context ]
 
-      oldCss.stylesheet.rules.forEach(rule => {
+      parsedCss.stylesheet.rules.forEach(rule => {
         if (rule.type === 'comment' && DELIMITER.test(rule.comment)) {
           const matches = rule.comment.match(DELIMITER)
           const type = matches[1]
@@ -98,14 +109,14 @@ function apply (compiler) {
           return
         }
 
-        const mapping = hasMap && oldMap.originalPositionFor(rule.position.start)
+        const mapping = parsedMap && parsedMap.originalPositionFor(rule.position.start)
 
-        const raw = css.slice(
-          lineColumn(css).toIndex(rule.position.start),
-          lineColumn(css).toIndex(rule.position.end)
+        const css = rawCss.slice(
+          lineColumn(rawCss).toIndex(rule.position.start),
+          lineColumn(rawCss).toIndex(rule.position.end)
         )
 
-        context.add(raw, mapping)
+        context.add(css, mapping)
       })
 
       if (stack.length === 1) {
@@ -116,16 +127,19 @@ function apply (compiler) {
 
       complete.forEach(block => {
         // append original sources to map where necessary
-        hasMap && oldMap.sources.forEach(source => {
+        parsedMap && parsedMap.sources.forEach(source => {
           if (block.map._sources.has(source)) {
-            block.map.setSourceContent(source, oldMap.sourceContentFor(source))
+            block.map.setSourceContent(source, parsedMap.sourceContentFor(source))
           }
         })
 
         const result = block.stringify()
 
         compilation.assets[block.file] = new RawSource(result.css)
-        compilation.assets[block.file + '.map'] = new RawSource(result.map)
+
+        if (result.map) {
+          compilation.assets[block.file + '.map'] = new RawSource(result.map)
+        }
       })
     })
 
