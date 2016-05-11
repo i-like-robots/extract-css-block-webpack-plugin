@@ -8,6 +8,10 @@
   },
   "author": "Matt Hinchliffe",
   "keywords": [
+    "assets",
+    "css",
+    "plugin",
+    "stylesheets",
     "webpack"
   ],
   "repository": {

@@ -19,7 +19,7 @@ class Block {
   add (css, mapping) {
     const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
 
-    this.map.addMapping({
+    mapping && this.map.addMapping({
       source: mapping.source,
       generated: { line: position.line, column: position.col },
       original: { line: mapping.line, column: mapping.column }
@@ -55,15 +55,17 @@ class RawSource {
 function apply (compiler) {
   compiler.plugin('emit', (compilation, callback) => {
     const files = Object.keys(compilation.assets).filter(filename => {
-      return /\.css$/.test(filename) && compilation.assets[filename + '.map']
+      return /\.css$/.test(filename)
     })
 
     files.forEach(file => {
-      const css = compilation.assets[file].source()
-      const map = compilation.assets[file + '.map'].source()
+      const hasMap = compilation.assets.hasOwnProperty(file + '.map')
 
-      const oldMap = sourceMap.SourceMapConsumer(map)
+      const css = compilation.assets[file].source()
+      const map = hasMap && compilation.assets[file + '.map'].source()
+
       const oldCss = cssParser.parse(css)
+      const oldMap = hasMap && sourceMap.SourceMapConsumer(map)
 
       let context = new Block(file)
 
@@ -96,7 +98,7 @@ function apply (compiler) {
           return
         }
 
-        const mapping = oldMap.originalPositionFor(rule.position.start)
+        const mapping = hasMap && oldMap.originalPositionFor(rule.position.start)
 
         const raw = css.slice(
           lineColumn(css).toIndex(rule.position.start),
@@ -114,7 +116,7 @@ function apply (compiler) {
 
       complete.forEach(block => {
         // append original sources to map where necessary
-        oldMap.sources.forEach(source => {
+        hasMap && oldMap.sources.forEach(source => {
           if (block.map._sources.has(source)) {
             block.map.setSourceContent(source, oldMap.sourceContentFor(source))
           }
