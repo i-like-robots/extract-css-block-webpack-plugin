@@ -3,8 +3,16 @@
 const fs = require('fs')
 const assert = require('assert')
 const sourceMap = require('source-map')
+const webpack = require('webpack')
+const config = require('./fixture/config')
 
 describe('Extract css block plugin', () => {
+  before((done) => {
+    webpack(config.with).run((err, foo) => {
+      done(err)
+    })
+  })
+
   describe('file creation', () => {
     it('creates a css file for each extract', () => {
       assert.ok(fs.statSync('./test/output/main.css'))
@@ -50,12 +58,17 @@ describe('Extract css block plugin', () => {
   })
 
   describe('source maps', () => {
-    const result1 = new sourceMap.SourceMapConsumer(
-      fs.readFileSync('./test/output/departures.css.map').toString()
-    )
-    const result2 = new sourceMap.SourceMapConsumer(
-      fs.readFileSync('./test/output/main.css.map').toString()
-    )
+    let result1
+    let result2
+
+    before(() => {
+      result1 = new sourceMap.SourceMapConsumer(
+        fs.readFileSync('./test/output/departures.css.map').toString()
+      )
+      result2 = new sourceMap.SourceMapConsumer(
+        fs.readFileSync('./test/output/main.css.map').toString()
+      )
+    })
 
     it('associates each source map with a stylesheet', () => {
       assert.equal(result1.file, './test/output/departures.css')
