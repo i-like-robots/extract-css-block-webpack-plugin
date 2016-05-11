@@ -36,15 +36,31 @@ class Block {
   }
 }
 
+// There's no documentation for this so just be a mimic...
+// <https://github.com/webpack/webpack-sources/blob/master/lib/RawSource.js>
+class RawSource {
+  constructor (value) {
+    this._value = value
+  }
+
+  source () {
+    return this._value
+  }
+
+  size () {
+    return this._value.length
+  }
+}
+
 module.exports = function () {
   this.plugin('emit', (compilation, callback) => {
     const files = Object.keys(compilation.assets).filter(filename => {
-      return /\.css$/.test(filename) && compilation.assets[`${filename}.map`]
+      return /\.css$/.test(filename) && compilation.assets[filename + '.map']
     })
 
     files.forEach(file => {
       const css = compilation.assets[file].source()
-      const map = compilation.assets[`${file}.map`]._value
+      const map = compilation.assets[file + '.map'].source()
 
       const oldMap = sourceMap.SourceMapConsumer(map)
       const oldCss = cssParser.parse(css)
@@ -108,15 +124,8 @@ module.exports = function () {
         // TODO: destructure when using Node 6
         const result = block.stringify()
 
-        compilation.assets[block.file] = {
-          source: () => result.css,
-          size: () => result.css.length
-        }
-
-        compilation.assets[block.file + '.map'] = {
-          source: () => result.map,
-          size: () => result.map.length
-        }
+        compilation.assets[block.file] = new RawSource(result.css)
+        compilation.assets[block.file + '.map'] = new RawSource(result.map)
       })
     })
 
