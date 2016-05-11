@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "rm -rf output && webpack && mocha test.js"
+    "test": "rm -rf test/output && webpack --config test/config.js && mocha test/spec.js"
   },
   "author": "Matt Hinchliffe",
   "keywords": [

@@ -12,7 +12,7 @@ pids
 .lock-wscript
 
 # Compiled code
-output
+test/output
 
 # Dependency directory
 node_modules

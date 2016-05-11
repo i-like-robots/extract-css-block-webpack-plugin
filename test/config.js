@@ -1,11 +1,11 @@
 'use strict'
 
-const ExtractCssBlockPlugin = require('./index')
+const ExtractCssBlockPlugin = require('../index')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 
 module.exports = {
   entry: {
-    './output/main.css': './test-files/entry.scss'
+    './test/output/main.css': './test/fixtures/entry.scss'
   },
   output: {
     filename: '[name]'
