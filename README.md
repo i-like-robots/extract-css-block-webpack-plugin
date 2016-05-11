@@ -21,7 +21,7 @@ npm i --save-dev extract-css-block-webpack-plugin
 Next apply the plugin via your webpack config. The plugin can _only_ be used with separate stylesheets and therefore _must_ be added after the extract text plugin:
 
 ```js
-const extractCssBlockPlugin = require('extract-css-block-webpack-plugin')
+const ExtractCssBlockPlugin = require('extract-css-block-webpack-plugin')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 
 module.exports = {
@@ -36,7 +36,7 @@ module.exports = {
   },
   plugins: [
     new ExtractTextPlugin('[name]'),
-    extractCssBlockPlugin
+    new ExtractCssBlockPlugin()
   ]
 }
 ```

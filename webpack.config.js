@@ -1,6 +1,6 @@
 'use strict'
 
-const plugin = require('./index')
+const ExtractCssBlockPlugin = require('./index')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 
 module.exports = {
@@ -21,6 +21,6 @@ module.exports = {
   devtool: 'source-map',
   plugins: [
     new ExtractTextPlugin('[name]'),
-    plugin
+    new ExtractCssBlockPlugin()
   ]
 }

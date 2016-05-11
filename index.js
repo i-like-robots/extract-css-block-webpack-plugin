@@ -52,8 +52,8 @@ class RawSource {
   }
 }
 
-module.exports = function () {
-  this.plugin('emit', (compilation, callback) => {
+function apply (compiler) {
+  compiler.plugin('emit', (compilation, callback) => {
     const files = Object.keys(compilation.assets).filter(filename => {
       return /\.css$/.test(filename) && compilation.assets[filename + '.map']
     })
@@ -72,7 +72,6 @@ module.exports = function () {
 
       oldCss.stylesheet.rules.forEach(rule => {
         if (rule.type === 'comment' && DELIMITER.test(rule.comment)) {
-          // TODO: destructure when using Node 6
           const matches = rule.comment.match(DELIMITER)
           const type = matches[1]
           const name = matches[2]
@@ -121,7 +120,6 @@ module.exports = function () {
           }
         })
 
-        // TODO: destructure when using Node 6
         const result = block.stringify()
 
         compilation.assets[block.file] = new RawSource(result.css)
@@ -131,4 +129,8 @@ module.exports = function () {
 
     callback()
   })
+}
+
+module.exports = function () {
+  return { apply }
 }
