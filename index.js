@@ -126,7 +126,7 @@ function apply (compiler) {
       complete.forEach(block => {
         // append original sources to map where necessary
         parsedMap && parsedMap.sources.forEach(source => {
-          if (block.map._sources.has(source)) {
+          if (block.map && block.map._sources.has(source)) {
             block.map.setSourceContent(source, parsedMap.sourceContentFor(source))
           }
         })
