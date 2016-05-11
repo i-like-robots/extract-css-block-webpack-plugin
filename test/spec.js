@@ -1,56 +1,58 @@
 'use strict'
 
-const fs = require('fs')
 const assert = require('assert')
 const sourceMap = require('source-map')
 const webpack = require('webpack')
 const config = require('./fixture/config')
 
 describe('Extract css block plugin', () => {
+  let stats
+
   before((done) => {
-    webpack(config.with).run((err, foo) => {
+    webpack(config.with).run((err, result) => {
+      stats = result
       done(err)
     })
   })
 
   describe('file creation', () => {
     it('creates a css file for each extract', () => {
-      assert.ok(fs.statSync('./test/output/main.css'))
-      assert.ok(fs.statSync('./test/output/departures.css'))
-      assert.ok(fs.statSync('./test/output/trains.css'))
+      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css'))
+      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css'))
+      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css'))
     })
 
     it('creates a map file for each extract', () => {
-      assert.ok(fs.statSync('./test/output/main.css.map'))
-      assert.ok(fs.statSync('./test/output/departures.css.map'))
-      assert.ok(fs.statSync('./test/output/trains.css.map'))
+      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css.map'))
+      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css.map'))
+      assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css.map'))
     })
   })
 
   describe('output styles', () => {
     it('removes block pragmas', () => {
-      const result = fs.readFileSync('./test/output/main.css').toString()
+      const result = stats.compilation.assets['./test/output/main.css'].source()
 
       assert.equal(/\*! start:[\w]+\.css \*/.test(result), false)
       assert.equal(/\*! end:[\w]+\.css \*/.test(result), false)
     })
 
     it('removes original sourcemap pragmas', () => {
-      const result = fs.readFileSync('./test/output/main.css').toString()
+      const result = stats.compilation.assets['./test/output/main.css'].source()
       assert.equal(result.match(/sourceMappingURL/g).length, 1)
     })
 
     it('appends new sourcemap pragmas to each extract', () => {
-      const result1 = fs.readFileSync('./test/output/departures.css').toString()
-      const result2 = fs.readFileSync('./test/output/trains.css').toString()
+      const result1 = stats.compilation.assets['./test/output/departures.css'].source()
+      const result2 = stats.compilation.assets['./test/output/trains.css'].source()
 
       assert.equal(result1.match(/sourceMappingURL/g).length, 1)
       assert.equal(result2.match(/sourceMappingURL/g).length, 1)
     })
 
     it('extracts the contents of the block pragmas', () => {
-      const result1 = fs.readFileSync('./test/output/departures.css').toString()
-      const result2 = fs.readFileSync('./test/output/trains.css').toString()
+      const result1 = stats.compilation.assets['./test/output/departures.css'].source()
+      const result2 = stats.compilation.assets['./test/output/trains.css'].source()
 
       assert.ok(/^\.departures \{/.test(result1))
       assert.ok(/^\.trains \{/.test(result2))
@@ -63,10 +65,10 @@ describe('Extract css block plugin', () => {
 
     before(() => {
       result1 = new sourceMap.SourceMapConsumer(
-        fs.readFileSync('./test/output/departures.css.map').toString()
+        stats.compilation.assets['./test/output/departures.css.map'].source()
       )
       result2 = new sourceMap.SourceMapConsumer(
-        fs.readFileSync('./test/output/main.css.map').toString()
+        stats.compilation.assets['./test/output/main.css.map'].source()
       )
     })
 
