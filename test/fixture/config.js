@@ -14,7 +14,7 @@ module.exports.with = {
     loaders: [
       {
         test: /\.scss$/,
-        loader: ExtractTextPlugin.extract('style', ['css?sourceMap', 'sass?sourceMap'])
+        loader: ExtractTextPlugin.extract(['css?sourceMap', 'sass?sourceMap'])
       }
     ]
   },
@@ -36,7 +36,7 @@ module.exports.without = {
     loaders: [
       {
         test: /\.scss$/,
-        loader: ExtractTextPlugin.extract('style', ['css', 'sass'])
+        loader: ExtractTextPlugin.extract(['css', 'sass'])
       }
     ]
   },

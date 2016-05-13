@@ -30,7 +30,7 @@ module.exports = {
     loaders: [
       {
         test: /\.css$/,
-        loader: ExtractTextPlugin.extract('style', ['css'])
+        loader: ExtractTextPlugin.extract(['css', 'sass'])
       }
     ]
   },
@@ -80,7 +80,7 @@ module.exports = {
     loaders: [
       {
         test: /\.css$/,
-        loader: ExtractTextPlugin.extract('style', ['css?sourceMap', 'sass?sourceMap'])
+        loader: ExtractTextPlugin.extract(['css?sourceMap', 'sass?sourceMap'])
       }
     ]
   },
