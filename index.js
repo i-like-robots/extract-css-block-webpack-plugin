@@ -73,8 +73,16 @@ function apply (compiler) {
       const rawCss = compilation.assets[file].source()
       const rawMap = hasMap && compilation.assets[file + '.map'].source()
 
-      const parsedCss = cssParser.parse(rawCss)
+      const parsedCss = cssParser.parse(rawCss, { silent: true })
       const parsedMap = hasMap && sourceMap.SourceMapConsumer(rawMap)
+
+      if (parsedCss.stylesheet.parsingErrors.length) {
+        const err = parsedCss.stylesheet.parsingErrors.shift()
+
+        compilation.errors.push(
+          new Error(`Error parsing ${file}: ${err.reason}, line=${err.line}`)
+        )
+      }
 
       let context = new Block(file)
 
@@ -95,7 +103,9 @@ function apply (compiler) {
               complete.push(stack.pop())
               context = stack[stack.length - 1]
             } else {
-              throw new Error(`Closing block mismatch: open=${context.name}, closing=${name}`)
+              compilation.errors.push(
+                new Error(`Closing block mismatch: open=${context.name}, closing=${name}`)
+              )
             }
           }
 
@@ -120,7 +130,9 @@ function apply (compiler) {
       if (stack.length === 1) {
         complete.push(stack.pop())
       } else {
-        throw new Error(`Block was not closed: ${context.name}`)
+        compilation.errors.push(
+          `Block was not closed: /*! start:${context.name} */`
+        )
       }
 
       complete.forEach(block => {
