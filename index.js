@@ -17,16 +17,16 @@ class Block {
 
   add (css, mapping) {
     if (mapping && mapping.source) {
-      this.handleMapping(mapping)
+      this.handleMapping(mapping, lineColumn(this.css, this.css.length - 1))
     }
 
     this.css += css
   }
 
-  handleMapping (mapping) {
+  handleMapping (mapping, position) {
     this.map = this.map || new sourceMap.SourceMapGenerator({ file: this.file })
 
-    const position = lineColumn(this.css, this.css.length - 1) || { line: 1, col: 0 }
+    position = position || { line: 1, col: 0 }
 
     this.map.addMapping({
       source: mapping.source,
@@ -125,13 +125,29 @@ function apply (compiler) {
         )
 
         context.add(css, mapping)
+
+        // add mappings for any rulesets inside a media query
+        if (parsedMap && rule.type === 'media') {
+          rule.rules.forEach(child => {
+            const mapping = parsedMap.originalPositionFor(child.position.start)
+
+            const css = rawCss.slice(
+              lineColumn(rawCss).toIndex(child.position.start),
+              lineColumn(rawCss).toIndex(child.position.end)
+            )
+
+            const newPosition = lineColumn(context.css, context.css.indexOf(css) - 1)
+
+            context.handleMapping(mapping, newPosition)
+          })
+        }
       })
 
       if (stack.length === 1) {
         complete.push(stack.pop())
       } else {
         compilation.errors.push(
-          `Block was not closed: /*! start:${context.name} */`
+          new Error(`Block was not closed: /*! start:${context.name} */`)
         )
       }
 

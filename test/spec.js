@@ -161,6 +161,22 @@ describe('Extract css block plugin', () => {
         assert.equal(generated.column, 0)
       })
 
+      it('adds mappings for rules inside medaia queries', () => {
+        // entry.scss > @media ... { .network__toggle }
+        const generated = result1.generatedPositionFor({
+          line: 241, column: 2, source: result1.sources[2]
+        })
+
+        assert.equal(generated.line, 108)
+        assert.equal(generated.column, 2)
+
+        // trains.css > @media ... { .trains th:last-child }
+        const original = result3.originalPositionFor({ line: 17, column: 2 })
+
+        assert.equal(original.line, 339)
+        assert.equal(original.column, 2)
+      })
+
       it('includes source content from the original source map', () => {
         assert.equal(result1.sourcesContent.length, 3)
         assert.equal(result2.sourcesContent.length, 1)
