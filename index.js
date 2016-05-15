@@ -15,18 +15,14 @@ class Block {
     this.css = ''
   }
 
-  add (css, mapping) {
-    if (mapping && mapping.source) {
-      this.handleMapping(mapping, lineColumn(this.css, this.css.length - 1))
-    }
-
+  add (css) {
     this.css += css
   }
 
-  handleMapping (mapping, position) {
+  applyMapping (css, mapping) {
     this.map = this.map || new sourceMap.SourceMapGenerator({ file: this.file })
 
-    position = position || { line: 1, col: 0 }
+    const position = lineColumn(this.css, this.css.indexOf(css) - 1) || { line: 1, col: 0 }
 
     this.map.addMapping({
       source: mapping.source,
@@ -89,6 +85,13 @@ function apply (compiler) {
       const complete = []
       const stack = [ context ]
 
+      function extractCss(rule) {
+        return rawCss.slice(
+          lineColumn(rawCss).toIndex(rule.position.start),
+          lineColumn(rawCss).toIndex(rule.position.end)
+        )
+      }
+
       parsedCss.stylesheet.rules.forEach(rule => {
         if (rule.type === 'comment' && DELIMITER.test(rule.comment)) {
           const matches = rule.comment.match(DELIMITER)
@@ -117,28 +120,20 @@ function apply (compiler) {
           return
         }
 
-        const mapping = parsedMap && parsedMap.originalPositionFor(rule.position.start)
+        const css = extractCss(rule)
+        context.add(css)
 
-        const css = rawCss.slice(
-          lineColumn(rawCss).toIndex(rule.position.start),
-          lineColumn(rawCss).toIndex(rule.position.end)
-        )
+        // translate existing source map to the new target
+        if (parsedMap) {
+          const mapping = parsedMap.originalPositionFor(rule.position.start)
+          context.applyMapping(css, mapping)
 
-        context.add(css, mapping)
-
-        // add mappings for any rulesets inside a media query
-        if (parsedMap && rule.type === 'media') {
-          rule.rules.forEach(child => {
+          // add mappings for any rulesets inside a media query
+          rule.type === 'media' && rule.rules.forEach(child => {
+            const css = extractCss(child)
             const mapping = parsedMap.originalPositionFor(child.position.start)
 
-            const css = rawCss.slice(
-              lineColumn(rawCss).toIndex(child.position.start),
-              lineColumn(rawCss).toIndex(child.position.end)
-            )
-
-            const newPosition = lineColumn(context.css, context.css.indexOf(css) - 1)
-
-            context.handleMapping(mapping, newPosition)
+            context.applyMapping(css, mapping)
           })
         }
       })
