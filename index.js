@@ -22,7 +22,8 @@ class Block {
   applyMapping (css, mapping) {
     this.map = this.map || new sourceMap.SourceMapGenerator({ file: this.file })
 
-    const position = lineColumn(this.css, this.css.indexOf(css) - 1) || { line: 1, col: 0 }
+    const index = this.css.lastIndexOf(css) - 1
+    const position = lineColumn(this.css, index) || { line: 1, col: 0 }
 
     this.map.addMapping({
       source: mapping.source,
