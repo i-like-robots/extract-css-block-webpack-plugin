@@ -184,4 +184,21 @@ describe('Extract css block plugin', () => {
       })
     })
   })
+
+  context('invalid source map', () => {
+    before((done) => {
+      webpack(config.invalid).run((err, result) => {
+        stats = result
+        done(err)
+      })
+    })
+
+    it('warns the user that the provided source map is invalid', () => {
+      assert.equal(stats.compilation.warnings.length, 1)
+    })
+
+    it('warns the user if their source map configuration may be invalid', () => {
+      assert.ok(stats.compilation.warnings.pop().match(/configuration/))
+    })
+  })
 })

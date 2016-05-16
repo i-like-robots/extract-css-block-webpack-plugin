@@ -65,7 +65,7 @@ function apply (compiler) {
     })
 
     files.forEach(file => {
-      const hasMap = compilation.assets.hasOwnProperty(file + '.map')
+      let hasMap = compilation.assets.hasOwnProperty(file + '.map')
 
       const rawCss = compilation.assets[file].source()
       const rawMap = hasMap && compilation.assets[file + '.map'].source()
@@ -79,6 +79,18 @@ function apply (compiler) {
         compilation.errors.push(
           new Error(`Error parsing ${file}: ${err.reason}, line=${err.line}`)
         )
+      }
+
+      if (parsedMap && parsedMap._mappings.length === 0) {
+        hasMap = false
+
+        let warning = `Invalid source map for ${file}`
+
+        if (compilation.options.devtool === 'source-map') {
+          warning += ', your source map configuration may be invalid'
+        }
+
+        compilation.warnings.push(warning)
       }
 
       let context = new Block(file)
@@ -125,7 +137,7 @@ function apply (compiler) {
         context.add(css)
 
         // translate existing source map to the new target
-        if (parsedMap && parsedMap._mappings.length) {
+        if (hasMap) {
           const mapping = parsedMap.originalPositionFor(rule.position.start)
           context.applyMapping(css, mapping)
 

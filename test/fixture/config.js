@@ -45,3 +45,25 @@ module.exports.without = {
     new ExtractCssBlockPlugin()
   ]
 }
+
+module.exports.invalid = {
+  entry: {
+    './test/output/main.css': './test/fixture/entry.scss'
+  },
+  output: {
+    filename: '[name]'
+  },
+  module: {
+    loaders: [
+      {
+        test: /\.scss$/,
+        loader: ExtractTextPlugin.extract(['css', 'sass'])
+      }
+    ]
+  },
+  devtool: 'source-map',
+  plugins: [
+    new ExtractTextPlugin('[name]'),
+    new ExtractCssBlockPlugin()
+  ]
+}
