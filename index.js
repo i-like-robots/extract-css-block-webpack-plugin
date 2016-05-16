@@ -71,7 +71,7 @@ function apply (compiler) {
       const rawMap = hasMap && compilation.assets[file + '.map'].source()
 
       const parsedCss = cssParser.parse(rawCss, { silent: true })
-      const parsedMap = hasMap && sourceMap.SourceMapConsumer(rawMap)
+      const parsedMap = rawMap && sourceMap.SourceMapConsumer(rawMap)
 
       if (parsedCss.stylesheet.parsingErrors.length) {
         const err = parsedCss.stylesheet.parsingErrors.shift()
@@ -125,7 +125,7 @@ function apply (compiler) {
         context.add(css)
 
         // translate existing source map to the new target
-        if (parsedMap) {
+        if (parsedMap && parsedMap._mappings.length) {
           const mapping = parsedMap.originalPositionFor(rule.position.start)
           context.applyMapping(css, mapping)
 
