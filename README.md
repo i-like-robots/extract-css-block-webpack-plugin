@@ -41,7 +41,7 @@ module.exports = {
 }
 ```
 
-## Usage
+## Basic usage
 
 To mark blocks of rules as targets for extraction use 'loud' (`!`) start and end comments. For example, given this Sass `main.scss` entry point:
 
@@ -68,6 +68,55 @@ To mark blocks of rules as targets for extraction use 'loud' (`!`) start and end
 ```
 
 Webpack will write 3 stylesheets:- `main.css`, `critical.css` and `comments.css`.
+
+## Advanced usage
+
+Blocks may be nested:
+
+```css
+/*! start:header.css */
+.header {
+  padding: 10px 20px;
+  background: #333;
+  color: #FFF;
+}
+/*! start:header-menu.css */
+.header-menu {
+  list-style: none;
+  margin: 0 15px;
+}
+/*! end:header-menu.css */
+
+.header-logo {
+  float: left;
+  border: 0;
+}
+/*! end:header.css */
+```
+
+Blocks may also be used many times and their contents will be aggregated:
+
+```css
+/*! start:header.css */
+.header {
+  padding: 10px 20px;
+  background: #333;
+  color: #FFF;
+}
+/*! end:header.css */
+
+.header-menu {
+  list-style: none;
+  margin: 0 15px;
+}
+
+/*! start:header.css */
+.header-logo {
+  float: left;
+  border: 0;
+}
+/*! end:header.css */
+```
 
 ## Source maps
 

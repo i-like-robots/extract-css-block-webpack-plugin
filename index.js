@@ -9,19 +9,14 @@ const DELIMITER = /^!\s?(start|end):([\w_-]+\.css)\s?$/
 const SOURCEMAP = /^# sourceMappingURL=[\w_-]+\.css\.map/
 
 class Block {
-  constructor (file) {
+  constructor (file, hasMap) {
     this.file = file
     this.name = path.basename(file)
     this.css = ''
+    this.map = hasMap && new sourceMap.SourceMapGenerator({ file })
   }
 
-  add (css) {
-    this.css += css
-  }
-
-  applyMapping (css, mapping) {
-    this.map = this.map || new sourceMap.SourceMapGenerator({ file: this.file })
-
+  addMapping (css, mapping) {
     const index = this.css.lastIndexOf(css) - 1
     const position = lineColumn(this.css, index) || { line: 1, col: 0 }
 
@@ -93,17 +88,26 @@ function apply (compiler) {
         compilation.warnings.push(warning)
       }
 
-      let context = new Block(file)
+      const blocks = {}
+      const stack = []
 
-      const complete = []
-      const stack = [ context ]
+      function getBlock (filename) {
+        if (blocks.hasOwnProperty(filename)) {
+          return blocks[filename]
+        } else {
+          return blocks[filename] = new Block(filename, hasMap)
+        }
+      }
 
-      function extractCss(rule) {
+      function extractCss (rule) {
         return rawCss.slice(
           lineColumn(rawCss).toIndex(rule.position.start),
           lineColumn(rawCss).toIndex(rule.position.end)
         )
       }
+
+      let context = getBlock(file)
+      stack.push(context)
 
       parsedCss.stylesheet.rules.forEach(rule => {
         if (rule.type === 'comment' && DELIMITER.test(rule.comment)) {
@@ -112,11 +116,11 @@ function apply (compiler) {
           const name = matches[2]
 
           if (type === 'start') {
-            context = new Block(`${path.dirname(file)}/${name}`)
+            context = getBlock(`${path.dirname(file)}/${name}`)
             stack.push(context)
           } else {
             if (context.name === name) {
-              complete.push(stack.pop())
+              stack.pop()
               context = stack[stack.length - 1]
             } else {
               compilation.errors.push(
@@ -134,34 +138,34 @@ function apply (compiler) {
         }
 
         const css = extractCss(rule)
-        context.add(css)
+        context.css += css
 
         // translate existing source map to the new target
         if (hasMap) {
           const mapping = parsedMap.originalPositionFor(rule.position.start)
-          context.applyMapping(css, mapping)
+          context.addMapping(css, mapping)
 
           // add mappings for any rulesets inside a media query
           rule.type === 'media' && rule.rules.forEach(child => {
             const css = extractCss(child)
             const mapping = parsedMap.originalPositionFor(child.position.start)
 
-            context.applyMapping(css, mapping)
+            context.addMapping(css, mapping)
           })
         }
       })
 
-      if (stack.length === 1) {
-        complete.push(stack.pop())
-      } else {
+      if (stack.length > 1) {
         compilation.errors.push(
           new Error(`Block was not closed: /*! start:${context.name} */`)
         )
       }
 
-      complete.forEach(block => {
+      Object.keys(blocks).forEach(filename => {
+        const block = blocks[filename]
+
         // append original sources to map where necessary
-        parsedMap && parsedMap.sources.forEach(source => {
+        block.map && parsedMap.sources.forEach(source => {
           if (block.map && block.map._sources.has(source)) {
             block.map.setSourceContent(source, parsedMap.sourceContentFor(source))
           }
