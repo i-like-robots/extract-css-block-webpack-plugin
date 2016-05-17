@@ -16,10 +16,6 @@ class Block {
     this.map = hasMap && new sourceMap.SourceMapGenerator({ file })
   }
 
-  add (css) {
-    this.css += css
-  }
-
   addMapping (css, mapping) {
     const index = this.css.lastIndexOf(css) - 1
     const position = lineColumn(this.css, index) || { line: 1, col: 0 }
@@ -142,7 +138,7 @@ function apply (compiler) {
         }
 
         const css = extractCss(rule)
-        context.add(css)
+        context.css += css
 
         // translate existing source map to the new target
         if (hasMap) {
