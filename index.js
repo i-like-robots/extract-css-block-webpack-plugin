@@ -9,19 +9,18 @@ const DELIMITER = /^!\s?(start|end):([\w_-]+\.css)\s?$/
 const SOURCEMAP = /^# sourceMappingURL=[\w_-]+\.css\.map/
 
 class Block {
-  constructor (file) {
+  constructor (file, hasMap) {
     this.file = file
     this.name = path.basename(file)
     this.css = ''
+    this.map = hasMap && new sourceMap.SourceMapGenerator({ file })
   }
 
   add (css) {
     this.css += css
   }
 
-  applyMapping (css, mapping) {
-    this.map = this.map || new sourceMap.SourceMapGenerator({ file: this.file })
-
+  addMapping (css, mapping) {
     const index = this.css.lastIndexOf(css) - 1
     const position = lineColumn(this.css, index) || { line: 1, col: 0 }
 
@@ -93,7 +92,7 @@ function apply (compiler) {
         compilation.warnings.push(warning)
       }
 
-      let context = new Block(file)
+      let context = new Block(file, hasMap)
 
       const complete = []
       const stack = [ context ]
@@ -112,7 +111,7 @@ function apply (compiler) {
           const name = matches[2]
 
           if (type === 'start') {
-            context = new Block(`${path.dirname(file)}/${name}`)
+            context = new Block(`${path.dirname(file)}/${name}`, hasMap)
             stack.push(context)
           } else {
             if (context.name === name) {
@@ -139,14 +138,14 @@ function apply (compiler) {
         // translate existing source map to the new target
         if (hasMap) {
           const mapping = parsedMap.originalPositionFor(rule.position.start)
-          context.applyMapping(css, mapping)
+          context.addMapping(css, mapping)
 
           // add mappings for any rulesets inside a media query
           rule.type === 'media' && rule.rules.forEach(child => {
             const css = extractCss(child)
             const mapping = parsedMap.originalPositionFor(child.position.start)
 
-            context.applyMapping(css, mapping)
+            context.addMapping(css, mapping)
           })
         }
       })
