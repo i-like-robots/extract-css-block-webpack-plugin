@@ -92,17 +92,26 @@ function apply (compiler) {
         compilation.warnings.push(warning)
       }
 
-      let context = new Block(file, hasMap)
+      const blocks = {}
+      const stack = []
 
-      const complete = []
-      const stack = [ context ]
+      function getBlock (filename) {
+        if (blocks.hasOwnProperty(filename)) {
+          return blocks[filename]
+        } else {
+          return blocks[filename] = new Block(filename, hasMap)
+        }
+      }
 
-      function extractCss(rule) {
+      function extractCss (rule) {
         return rawCss.slice(
           lineColumn(rawCss).toIndex(rule.position.start),
           lineColumn(rawCss).toIndex(rule.position.end)
         )
       }
+
+      let context = getBlock(file)
+      stack.push(context)
 
       parsedCss.stylesheet.rules.forEach(rule => {
         if (rule.type === 'comment' && DELIMITER.test(rule.comment)) {
@@ -111,11 +120,11 @@ function apply (compiler) {
           const name = matches[2]
 
           if (type === 'start') {
-            context = new Block(`${path.dirname(file)}/${name}`, hasMap)
+            context = getBlock(`${path.dirname(file)}/${name}`)
             stack.push(context)
           } else {
             if (context.name === name) {
-              complete.push(stack.pop())
+              stack.pop()
               context = stack[stack.length - 1]
             } else {
               compilation.errors.push(
@@ -150,17 +159,17 @@ function apply (compiler) {
         }
       })
 
-      if (stack.length === 1) {
-        complete.push(stack.pop())
-      } else {
+      if (stack.length > 1) {
         compilation.errors.push(
           new Error(`Block was not closed: /*! start:${context.name} */`)
         )
       }
 
-      complete.forEach(block => {
+      Object.keys(blocks).forEach(filename => {
+        const block = blocks[filename]
+
         // append original sources to map where necessary
-        parsedMap && parsedMap.sources.forEach(source => {
+        block.map && parsedMap.sources.forEach(source => {
           if (block.map && block.map._sources.has(source)) {
             block.map.setSourceContent(source, parsedMap.sourceContentFor(source))
           }
