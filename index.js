@@ -53,11 +53,11 @@ class RawSource {
   }
 }
 
-function apply (compiler) {
+function apply (options, compiler) {
   compiler.plugin('emit', (compilation, callback) => {
-    const files = Object.keys(compilation.assets).filter(filename => {
-      return /\.css$/.test(filename)
-    })
+    const files = Object.keys(compilation.assets).filter(
+      filename => options.match.test(filename)
+    )
 
     files.forEach(file => {
       let hasMap = compilation.assets.hasOwnProperty(file + '.map')
@@ -186,6 +186,7 @@ function apply (compiler) {
   })
 }
 
-module.exports = function () {
-  return { apply }
+module.exports = function (options) {
+  options = Object.assign({ match: /\.css$/ }, options)
+  return { apply: apply.bind(null, options) }
 }
