@@ -106,6 +106,11 @@ function apply (compiler) {
         )
       }
 
+      function addMapping (css, rule) {
+        const mapping = parsedMap.originalPositionFor(rule.position.start)
+        context.addMapping(css, mapping)
+      }
+
       let context = getBlock(file)
       stack.push(context)
 
@@ -142,15 +147,11 @@ function apply (compiler) {
 
         // translate existing source map to the new target
         if (hasMap) {
-          const mapping = parsedMap.originalPositionFor(rule.position.start)
-          context.addMapping(css, mapping)
+          addMapping(css, rule)
 
           // add mappings for any rulesets inside a media query
           rule.type === 'media' && rule.rules.forEach(child => {
-            const css = extractCss(child)
-            const mapping = parsedMap.originalPositionFor(child.position.start)
-
-            context.addMapping(css, mapping)
+            addMapping(extractCss(child), child)
           })
         }
       })
