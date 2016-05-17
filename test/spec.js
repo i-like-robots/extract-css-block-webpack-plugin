@@ -18,32 +18,36 @@ describe('Extract css block plugin', () => {
 
     describe('file creation', () => {
       it('creates a css file for each extract', () => {
-        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css'))
-        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css'))
-        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css'))
+        ['main', 'external', 'parent', 'child'].forEach(file => {
+          assert.ok(stats.compilation.assets.hasOwnProperty(`./test/output/${file}.css`))
+        })
       })
 
       it('does not create any map files for extracts', () => {
-        assert.equal(stats.compilation.assets.hasOwnProperty('./test/output/main.css.map'), false)
-        assert.equal(stats.compilation.assets.hasOwnProperty('./test/output/departures.css.map'), false)
-        assert.equal(stats.compilation.assets.hasOwnProperty('./test/output/trains.css.map'), false)
+        ['main', 'external', 'parent', 'child'].forEach(file => {
+          assert.equal(stats.compilation.assets.hasOwnProperty(`./test/output/${file}.css.map`), false)
+        })
       })
     })
 
     describe('output styles', () => {
       it('removes block pragmas', () => {
-        const result = stats.compilation.assets['./test/output/main.css'].source()
+        ['main', 'external', 'parent', 'child'].forEach(file => {
+          const result = stats.compilation.assets[`./test/output/${file}.css`].source()
 
-        assert.equal(/\*! start:[\w]+\.css \*/.test(result), false)
-        assert.equal(/\*! end:[\w]+\.css \*/.test(result), false)
+          assert.equal(/\*! start:[\w]+\.css \*/.test(result), false)
+          assert.equal(/\*! end:[\w]+\.css \*/.test(result), false)
+        })
       })
 
       it('extracts the contents of the block pragmas', () => {
-        const result1 = stats.compilation.assets['./test/output/departures.css'].source()
-        const result2 = stats.compilation.assets['./test/output/trains.css'].source()
+        const result1 = stats.compilation.assets['./test/output/external.css'].source()
+        const result2 = stats.compilation.assets['./test/output/parent.css'].source()
+        const result3 = stats.compilation.assets['./test/output/child.css'].source()
 
-        assert.ok(/^\.departures \{/.test(result1))
-        assert.ok(/^\.trains \{/.test(result2))
+        assert.ok(/^\.external \{/.test(result1))
+        assert.ok(/^\.parent \{/.test(result2))
+        assert.ok(/^\.child \{/.test(result3))
       })
 
       it('removes any sourcemap pragmas', () => {
@@ -63,124 +67,113 @@ describe('Extract css block plugin', () => {
 
     describe('file creation', () => {
       it('creates a map file for each extract', () => {
-        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/main.css.map'))
-        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/departures.css.map'))
-        assert.ok(stats.compilation.assets.hasOwnProperty('./test/output/trains.css.map'))
+        ['main', 'external', 'parent', 'child'].forEach(file => {
+          const result = stats.compilation.assets[`./test/output/${file}.css`].source()
+          assert.equal(result.match(/sourceMappingURL/g).length, 1)
+          assert.ok(stats.compilation.assets.hasOwnProperty(`./test/output/${file}.css.map`))
+        })
       })
     })
 
     describe('output styles', () => {
       it('appends new sourcemap pragmas to each extract', () => {
-        const result1 = stats.compilation.assets['./test/output/main.css'].source()
-        const result2 = stats.compilation.assets['./test/output/departures.css'].source()
-        const result3 = stats.compilation.assets['./test/output/trains.css'].source()
-
-        assert.equal(result1.match(/sourceMappingURL/g).length, 1)
-        assert.equal(result2.match(/sourceMappingURL/g).length, 1)
-        assert.equal(result3.match(/sourceMappingURL/g).length, 1)
+        ['main', 'external', 'parent', 'child'].forEach(file => {
+          const result = stats.compilation.assets[`./test/output/${file}.css`].source()
+          assert.equal(result.match(/sourceMappingURL/g).length, 1)
+        })
       })
     })
 
     describe('source maps', () => {
-      let result1
-      let result2
-      let result3
+      let results = {}
 
       before(() => {
-        result1 = new sourceMap.SourceMapConsumer(
-          stats.compilation.assets['./test/output/main.css.map'].source()
-        )
-        result2 = new sourceMap.SourceMapConsumer(
-          stats.compilation.assets['./test/output/departures.css.map'].source()
-        )
-        result3 = new sourceMap.SourceMapConsumer(
-          stats.compilation.assets['./test/output/trains.css.map'].source()
-        )
+        ['main', 'external', 'parent', 'child'].forEach(file => {
+          results[file] = new sourceMap.SourceMapConsumer(
+            stats.compilation.assets[`./test/output/${file}.css.map`].source()
+          )
+        })
       })
 
       it('associates each source map with a stylesheet', () => {
-        assert.equal(result1.file, './test/output/main.css')
-        assert.equal(result2.file, './test/output/departures.css')
-        assert.equal(result3.file, './test/output/trains.css')
+        ['main', 'external', 'parent', 'child'].forEach(file => {
+          assert.equal(results[file].file, `./test/output/${file}.css`)
+        })
       })
 
       it('translates new positions to the original', () => {
         let original
 
-        // main.css > .notice--loading {}
-        original = result1.originalPositionFor({ line: 131, column: 26 })
+        original = results.main.originalPositionFor({ line: 14, column: 18 })
 
-        assert.equal(original.line, 367)
+        assert.equal(original.line, 5)
         assert.equal(original.column, 0)
 
-        // departures.css > .departures {}
-        original = result2.originalPositionFor({ line: 1, column: 0 })
+        original = results.external.originalPositionFor({ line: 1, column: 0 })
 
-        assert.equal(original.line, 277)
+        assert.equal(original.line, 18)
         assert.equal(original.column, 0)
 
-        // departures.css > .departures__heading {}
-        original = result2.originalPositionFor({ line: 2, column: 19 })
+        original = results.parent.originalPositionFor({ line: 1, column: 0 })
 
-        assert.equal(original.line, 281)
-        assert.equal(original.column, 0)
+        assert.equal(original.line, 24)
         assert.equal(original.column, 0)
 
-        // trains.css > .trains {}
-        original = result3.originalPositionFor({ line: 1, column: 0 })
+        original = results.child.originalPositionFor({ line: 1, column: 0 })
 
-        assert.equal(original.line, 309)
+        assert.equal(original.line, 29)
         assert.equal(original.column, 0)
       })
 
       it('translates original positions to the new', () => {
         let generated
 
-        // entry.scss > .network__line--piccadilly
-        generated = result1.generatedPositionFor({ line: 185, column: 0, source: result1.sources[2] })
+        generated = results.main.generatedPositionFor({
+          line: 45, column: 0, source: results.main.sources[1]
+        })
 
-        assert.equal(generated.line, 88)
-        assert.equal(generated.column, 28)
+        assert.equal(generated.line, 17)
+        assert.equal(generated.column, 38)
 
-        // normalize.scss > body
-        generated = result1.generatedPositionFor({ line: 6, column: 0, source: result1.sources[1] })
-
-        assert.equal(generated.line, 3)
-        assert.equal(generated.column, 35)
-
-        // entry.scss > .departures
-        generated = result2.generatedPositionFor({ line: 277, column: 0, source: result2.sources[0] })
+        generated = results.external.generatedPositionFor({
+          line: 18, column: 0, source: results.external.sources[0]
+        })
 
         assert.equal(generated.line, 1)
         assert.equal(generated.column, 0)
 
-        // entry.scss > .trains
-        generated = result3.generatedPositionFor({ line: 309, column: 0, source: result3.sources[0] })
+        generated = results.parent.generatedPositionFor({
+          line: 34, column: 0, source: results.parent.sources[0]
+        })
+
+        assert.equal(generated.line, 2)
+        assert.equal(generated.column, 28)
+
+        generated = results.child.generatedPositionFor({
+          line: 29, column: 0, source: results.child.sources[0]
+        })
 
         assert.equal(generated.line, 1)
         assert.equal(generated.column, 0)
       })
 
-      it('adds mappings for rules inside medaia queries', () => {
-        // entry.scss > @media ... { .network__toggle }
-        const generated = result1.generatedPositionFor({
-          line: 241, column: 2, source: result1.sources[2]
+      it('adds mappings for rules inside media queries', () => {
+        const generated = results.main.generatedPositionFor({
+          line: 11, column: 2, source: results.main.sources[1]
         })
 
-        assert.equal(generated.line, 108)
+        assert.equal(generated.line, 16)
         assert.equal(generated.column, 2)
 
-        // trains.css > @media ... { .trains th:last-child }
-        const original = result3.originalPositionFor({ line: 17, column: 2 })
+        const original = results.main.originalPositionFor({ line: 16, column: 2 })
 
-        assert.equal(original.line, 339)
+        assert.equal(original.line, 11)
         assert.equal(original.column, 2)
       })
 
       it('includes source content from the original source map', () => {
-        assert.equal(result1.sourcesContent.length, 3)
-        assert.equal(result2.sourcesContent.length, 1)
-        assert.equal(result3.sourcesContent.length, 1)
+        assert.equal(results.main.sourcesContent.length, 2)
+        assert.equal(results.external.sourcesContent.length, 1)
       })
     })
   })
