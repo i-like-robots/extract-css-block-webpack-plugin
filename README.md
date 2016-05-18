@@ -41,6 +41,12 @@ module.exports = {
 }
 ```
 
+The plugin accepts a map of options, currently there is only one:
+
+ Option  | Description                | Default
+---------|----------------------------|-----------
+ `match` | Filters files to transform | `/\.css$/`
+
 ## Basic usage
 
 To mark blocks of rules as targets for extraction use 'loud' (`!`) start and end comments. For example, given this Sass `main.scss` entry point:
