@@ -55,6 +55,11 @@ class RawSource {
 
 function apply (options, compiler) {
   compiler.plugin('emit', (compilation, callback) => {
+    // bail if there have been any errors
+    if (compilation.errors.length) {
+      return callback()
+    }
+
     const files = Object.keys(compilation.assets).filter(
       filename => options.match.test(filename)
     )
