@@ -1,6 +1,6 @@
 # Extract CSS block plugin for webpack ![Build status](https://api.travis-ci.org/i-like-robots/extract-css-block-webpack-plugin.png)
 
-I'll admit, it's not a catchy name.
+I'll admit, it's not a catchy name. Compatible with Webpack 1.x and 2.x.
 
 ## What and why?!
 
@@ -142,3 +142,7 @@ module.exports = {
   devtool: 'source-map'
 }
 ```
+
+## Why not use PostCSS?
+
+There is a [PostCSS version of this plugin](https://www.npmjs.com/package/postcss-extract-css-block) available but as PostCSS is not designed to write multiple files it is a bit hacky.
