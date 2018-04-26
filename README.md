@@ -1,6 +1,10 @@
-# Extract CSS block plugin for webpack ![Build status](https://api.travis-ci.org/i-like-robots/extract-css-block-webpack-plugin.png)
+⚠️ **This module is no longer maintained** ⚠️
 
-I'll admit, it's not a catchy name. Compatible with Webpack 1.x and 2.x. **No longer in active development**.
+# Extract CSS block plugin for webpack
+
+![Build status](https://api.travis-ci.org/i-like-robots/extract-css-block-webpack-plugin.png)
+
+I'll admit, it's not a catchy name. Compatible with Webpack 1.x and 2.x.
 
 ## What and why?!
 
