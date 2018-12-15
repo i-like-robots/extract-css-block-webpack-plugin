@@ -52,7 +52,7 @@ class RawSource {
 }
 
 function apply (options, compiler) {
-  compiler.plugin('emit', (compilation, callback) => {
+  compiler.hooks.emit.tapAsync('emit', (compilation, callback) => {
     // bail if there have been any errors
     if (compilation.errors.length) {
       return callback()
