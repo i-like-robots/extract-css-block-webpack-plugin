@@ -72,23 +72,11 @@ function apply (options, compiler) {
       const parsedMap = rawMap && new SourceMapConsumer(rawMap)
 
       if (parsedCss.stylesheet.parsingErrors.length) {
-        const err = parsedCss.stylesheet.parsingErrors.shift()
+        const error = parsedCss.stylesheet.parsingErrors.shift()
 
         compilation.errors.push(
-          new Error(`Error parsing ${file}: ${err.reason}, line=${err.line}`)
+          new Error(`Error parsing ${file}: ${error.reason}, line=${error.line}`)
         )
-      }
-
-      if (parsedMap && parsedMap._mappings.length === 0) {
-        hasMap = false
-
-        let warning = `Invalid source map for ${file}`
-
-        if (compilation.options.devtool === 'source-map') {
-          warning += ', your source map configuration may be invalid'
-        }
-
-        compilation.warnings.push(warning)
       }
 
       const blocks = {}
@@ -124,7 +112,7 @@ function apply (options, compiler) {
           const name = matches[2]
 
           if (type === 'start') {
-            context = getBlock(`${path.dirname(file)}/${name}`)
+            context = getBlock(name)
             stack.push(context)
           } else {
             if (context.name === name) {

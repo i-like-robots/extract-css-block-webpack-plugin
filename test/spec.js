@@ -8,22 +8,22 @@ describe('Extract css block plugin', () => {
 
   context('without source maps', () => {
     before((done) => {
-      webpack(config.without).run((err, result) => {
+      webpack(config.without).run((error, result) => {
         stats = result
-        done(err)
+        done(error)
       })
     })
 
     describe('file creation', () => {
       it('creates a css file for each extract', () => {
         ['main', 'external', 'parent', 'child'].forEach(file => {
-          assert.ok(stats.compilation.assets.hasOwnProperty(`./test/output/${file}.css`))
+          assert.ok(stats.compilation.assets.hasOwnProperty(`${file}.css`))
         })
       })
 
       it('does not create any map files for extracts', () => {
         ['main', 'external', 'parent', 'child'].forEach(file => {
-          assert.equal(stats.compilation.assets.hasOwnProperty(`./test/output/${file}.css.map`), false)
+          assert.equal(stats.compilation.assets.hasOwnProperty(`${file}.css.map`), false)
         })
       })
     })
@@ -31,7 +31,7 @@ describe('Extract css block plugin', () => {
     describe('output styles', () => {
       it('removes block pragmas', () => {
         ['main', 'external', 'parent', 'child'].forEach(file => {
-          const result = stats.compilation.assets[`./test/output/${file}.css`].source()
+          const result = stats.compilation.assets[`${file}.css`].source()
 
           assert.equal(/\*! start:[\w]+\.css \*/.test(result), false)
           assert.equal(/\*! end:[\w]+\.css \*/.test(result), false)
@@ -39,9 +39,9 @@ describe('Extract css block plugin', () => {
       })
 
       it('extracts the contents of the block pragmas', () => {
-        const result1 = stats.compilation.assets['./test/output/external.css'].source()
-        const result2 = stats.compilation.assets['./test/output/parent.css'].source()
-        const result3 = stats.compilation.assets['./test/output/child.css'].source()
+        const result1 = stats.compilation.assets['external.css'].source()
+        const result2 = stats.compilation.assets['parent.css'].source()
+        const result3 = stats.compilation.assets['child.css'].source()
 
         assert.ok(/^\.external \{/.test(result1))
         assert.ok(/^\.parent \{/.test(result2))
@@ -49,7 +49,7 @@ describe('Extract css block plugin', () => {
       })
 
       it('removes any sourcemap pragmas', () => {
-        const result = stats.compilation.assets['./test/output/main.css'].source()
+        const result = stats.compilation.assets['main.css'].source()
         assert.equal(result.match(/sourceMappingURL/g), null)
       })
     })
@@ -57,18 +57,18 @@ describe('Extract css block plugin', () => {
 
   context('with source maps', () => {
     before((done) => {
-      webpack(config.with).run((err, result) => {
+      webpack(config.with).run((error, result) => {
         stats = result
-        done(err)
+        done(error)
       })
     })
 
     describe('file creation', () => {
       it('creates a map file for each extract', () => {
         ['main', 'external', 'parent', 'child'].forEach(file => {
-          const result = stats.compilation.assets[`./test/output/${file}.css`].source()
+          const result = stats.compilation.assets[`${file}.css`].source()
           assert.equal(result.match(/sourceMappingURL/g).length, 1)
-          assert.ok(stats.compilation.assets.hasOwnProperty(`./test/output/${file}.css.map`))
+          assert.ok(stats.compilation.assets.hasOwnProperty(`${file}.css.map`))
         })
       })
     })
@@ -76,7 +76,7 @@ describe('Extract css block plugin', () => {
     describe('output styles', () => {
       it('appends new sourcemap pragmas to each extract', () => {
         ['main', 'external', 'parent', 'child'].forEach(file => {
-          const result = stats.compilation.assets[`./test/output/${file}.css`].source()
+          const result = stats.compilation.assets[`${file}.css`].source()
           assert.equal(result.match(/sourceMappingURL/g).length, 1)
         })
       })
@@ -88,14 +88,14 @@ describe('Extract css block plugin', () => {
       before(() => {
         ['main', 'external', 'parent', 'child'].forEach(file => {
           results[file] = new sourceMap.SourceMapConsumer(
-            stats.compilation.assets[`./test/output/${file}.css.map`].source()
+            stats.compilation.assets[`${file}.css.map`].source()
           )
         })
       })
 
       it('associates each source map with a stylesheet', () => {
         ['main', 'external', 'parent', 'child'].forEach(file => {
-          assert.equal(results[file].file, `./test/output/${file}.css`)
+          assert.equal(results[file].file, `${file}.css`)
         })
       })
 
@@ -173,23 +173,6 @@ describe('Extract css block plugin', () => {
         assert.equal(results.main.sourcesContent.length, 2)
         assert.equal(results.external.sourcesContent.length, 1)
       })
-    })
-  })
-
-  context('invalid source map', () => {
-    before((done) => {
-      webpack(config.invalid).run((err, result) => {
-        stats = result
-        done(err)
-      })
-    })
-
-    it('warns the user that the provided source map is invalid', () => {
-      assert.equal(stats.compilation.warnings.length, 1)
-    })
-
-    it('warns the user if their source map configuration may be invalid', () => {
-      assert.ok(stats.compilation.warnings.pop().match(/configuration/))
     })
   })
 })

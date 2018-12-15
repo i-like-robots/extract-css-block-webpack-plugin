@@ -1,69 +1,68 @@
-'use strict'
-
-const ExtractCssBlockPlugin = require('../../index')
-const ExtractTextPlugin = require('extract-text-webpack-plugin')
+const ExtractCssBlockPlugin = require('../../')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 module.exports.with = {
+  mode: 'development',
   entry: {
-    './test/output/main.css': './test/fixture/entry.scss'
-  },
-  output: {
-    filename: '[name]'
+    main: './test/fixture/entry.scss'
   },
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.scss$/,
-        loader: ExtractTextPlugin.extract(['css?sourceMap', 'sass?sourceMap'])
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader
+          },
+          {
+            loader: require.resolve('css-loader'),
+            options: {
+              sourceMap: true
+            }
+          },
+          {
+            loader: require.resolve('sass-loader'),
+            options: {
+              sourceMap: true
+            }
+          }
+        ]
       }
     ]
   },
   devtool: 'source-map',
   plugins: [
-    new ExtractTextPlugin('[name]'),
+    new MiniCssExtractPlugin({ filename: '[name].css' }),
     new ExtractCssBlockPlugin()
   ]
 }
 
 module.exports.without = {
+  mode: 'development',
   entry: {
-    './test/output/main.css': './test/fixture/entry.scss'
-  },
-  output: {
-    filename: '[name]'
+    main: './test/fixture/entry.scss'
   },
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.scss$/,
-        loader: ExtractTextPlugin.extract(['css', 'sass'])
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader
+          },
+          {
+            loader: require.resolve('css-loader')
+          },
+          {
+            loader: require.resolve('sass-loader')
+          }
+        ]
       }
     ]
   },
+  devtool: false,
   plugins: [
-    new ExtractTextPlugin('[name]'),
-    new ExtractCssBlockPlugin()
-  ]
-}
-
-module.exports.invalid = {
-  entry: {
-    './test/output/main.css': './test/fixture/entry.scss'
-  },
-  output: {
-    filename: '[name]'
-  },
-  module: {
-    loaders: [
-      {
-        test: /\.scss$/,
-        loader: ExtractTextPlugin.extract(['css', 'sass'])
-      }
-    ]
-  },
-  devtool: 'source-map',
-  plugins: [
-    new ExtractTextPlugin('[name]'),
+    new MiniCssExtractPlugin({ filename: '[name].css' }),
     new ExtractCssBlockPlugin()
   ]
 }
