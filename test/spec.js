@@ -1,5 +1,3 @@
-'use strict'
-
 const assert = require('assert')
 const sourceMap = require('source-map')
 const webpack = require('webpack')

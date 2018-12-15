@@ -1,7 +1,5 @@
-'use strict'
-
 const path = require('path')
-const sourceMap = require('source-map')
+const { SourceMapConsumer, SourceMapGenerator } = require('source-map')
 const cssParser = require('css')
 const lineColumn = require('line-column')
 
@@ -13,7 +11,7 @@ class Block {
     this.file = file
     this.name = path.basename(file)
     this.css = ''
-    this.map = hasMap && new sourceMap.SourceMapGenerator({ file })
+    this.map = hasMap && new SourceMapGenerator({ file })
   }
 
   addMapping (css, mapping) {
@@ -71,7 +69,7 @@ function apply (options, compiler) {
       const rawMap = hasMap && compilation.assets[file + '.map'].source()
 
       const parsedCss = cssParser.parse(rawCss, { silent: true })
-      const parsedMap = rawMap && sourceMap.SourceMapConsumer(rawMap)
+      const parsedMap = rawMap && new SourceMapConsumer(rawMap)
 
       if (parsedCss.stylesheet.parsingErrors.length) {
         const err = parsedCss.stylesheet.parsingErrors.shift()
