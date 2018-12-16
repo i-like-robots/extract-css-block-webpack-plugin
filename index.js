@@ -1,7 +1,7 @@
 const path = require('path')
-const { SourceMapConsumer, SourceMapGenerator } = require('source-map')
 const cssParser = require('css')
 const lineColumn = require('line-column')
+const { SourceMapConsumer, SourceMapGenerator } = require('source-map')
 
 const DELIMITER = /^!\s?(start|end):([\w_-]+\.css)\s?$/
 const SOURCEMAP = /^# sourceMappingURL=[\w_-]+\.css\.map/
@@ -11,7 +11,7 @@ class Block {
     this.file = file
     this.name = path.basename(file)
     this.css = ''
-    this.map = hasMap && new SourceMapGenerator({ file })
+    this.map = hasMap ? new SourceMapGenerator({ file }) : null
   }
 
   addMapping (css, mapping) {
@@ -52,7 +52,7 @@ class RawSource {
 }
 
 function apply (options, compiler) {
-  compiler.hooks.emit.tapAsync('emit', (compilation, callback) => {
+  compiler.hooks.emit.tapAsync('ExtractCssBlockPlugin', (compilation, callback) => {
     // bail if there have been any errors
     if (compilation.errors.length) {
       return callback()
@@ -63,13 +63,13 @@ function apply (options, compiler) {
     )
 
     files.forEach(file => {
-      let hasMap = compilation.assets.hasOwnProperty(file + '.map')
+      let hasMap = compilation.assets.hasOwnProperty(`${file}.map`)
 
       const rawCss = compilation.assets[file].source()
-      const rawMap = hasMap && compilation.assets[file + '.map'].source()
+      const rawMap = hasMap ? compilation.assets[`${file}.map`].source() : null
 
       const parsedCss = cssParser.parse(rawCss, { silent: true })
-      const parsedMap = rawMap && new SourceMapConsumer(rawMap)
+      const parsedMap = rawMap ? new SourceMapConsumer(rawMap) : null
 
       if (parsedCss.stylesheet.parsingErrors.length) {
         const error = parsedCss.stylesheet.parsingErrors.shift()
