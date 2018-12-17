@@ -3,8 +3,8 @@ const cssParser = require('css')
 const lineColumn = require('line-column')
 const { SourceMapConsumer, SourceMapGenerator } = require('source-map')
 
-const DELIMITER = /^!\s?(start|end):([\w_-]+\.css)\s?$/
-const SOURCEMAP = /^# sourceMappingURL=[\w_-]+\.css\.map/
+const DELIMITER = /^!\s?(start|end):([\w_\-.]+\.css)\s?$/
+const SOURCEMAP = /^# sourceMappingURL=[\w_\-.]+\.css\.map/
 
 class Block {
   constructor (file, hasMap) {
