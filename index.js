@@ -1,4 +1,5 @@
 const path = require('path')
+const crypto = require('crypto')
 const cssParser = require('css')
 const lineColumn = require('line-column')
 const { SourceMapConsumer, SourceMapGenerator } = require('source-map')
@@ -25,8 +26,8 @@ class Block {
     })
   }
 
-  stringify () {
-    const pragma = `/*# sourceMappingURL=${this.name}.map*/\n`
+  stringify (outputFile) {
+    const pragma = `/*# sourceMappingURL=${outputFile}.map*/\n`
 
     return {
       css: `${this.css}\n${this.map ? pragma : ''}`,
@@ -52,7 +53,7 @@ class RawSource {
 }
 
 function apply (options, compiler) {
-  compiler.hooks.emit.tapAsync('ExtractCssBlockPlugin', (compilation, callback) => {
+  compiler.hooks.emit.tap('ExtractCssBlockPlugin', (compilation, callback) => {
     // bail if there have been any errors
     if (compilation.errors.length) {
       return callback()
@@ -100,6 +101,21 @@ function apply (options, compiler) {
       function addMapping (css, rule) {
         const mapping = parsedMap.originalPositionFor(rule.position.start)
         context.addMapping(css, mapping)
+      }
+
+      function formatFilename (format, filename, contents) {
+        const { hashFunction, hashDigest, hashDigestLength } = compilation.outputOptions
+
+        let output = format.replace('[name]', path.basename(filename, '.css'))
+
+        if (format.includes('[contenthash]')) {
+          const hash = crypto.createHash(hashFunction).update(contents)
+          const digest = hash.digest(hashDigest).substring(0, hashDigestLength)
+
+          output = output.replace('[contenthash]', digest)
+        }
+
+        return output
       }
 
       let context = getBlock(file)
@@ -163,21 +179,28 @@ function apply (options, compiler) {
           }
         })
 
-        const result = block.stringify()
+        const outputFile = formatFilename(options.filename, block.file, block.css)
+        const result = block.stringify(outputFile)
 
-        compilation.assets[block.file] = new RawSource(result.css)
+        // remove old file from the compilation so we may rehash it
+        delete compilation.assets[block.file]
+        compilation.assets[outputFile] = new RawSource(result.css)
 
         if (result.map) {
-          compilation.assets[block.file + '.map'] = new RawSource(result.map)
+          delete compilation.assets[block.file + '.map']
+          compilation.assets[outputFile + '.map'] = new RawSource(result.map)
         }
       })
     })
-
-    callback()
   })
 }
 
-module.exports = function (options) {
-  options = Object.assign({ match: /\.css$/ }, options)
+module.exports = function (userOptions) {
+  const defaultOptions = {
+    match: /\.css$/,
+    filename: '[name].css'
+  }
+
+  const options = Object.assign(defaultOptions, userOptions)
   return { apply: apply.bind(null, options) }
 }
