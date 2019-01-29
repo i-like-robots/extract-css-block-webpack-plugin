@@ -2,61 +2,18 @@ const path = require('path')
 const crypto = require('crypto')
 const cssParser = require('css')
 const lineColumn = require('line-column')
-const { SourceMapConsumer, SourceMapGenerator } = require('source-map')
+const CSSBlock = require('./lib/CSSBlock')
+const RawSource = require('./lib/RawSource')
+const { SourceMapConsumer } = require('source-map')
 
 const DELIMITER = /^!\s?(start|end):([\w_\-.]+\.css)\s?$/
 const SOURCEMAP = /^# sourceMappingURL=[\w_\-.]+\.css\.map/
 
-class Block {
-  constructor (file, hasMap) {
-    this.file = file
-    this.name = path.basename(file)
-    this.css = ''
-    this.map = hasMap ? new SourceMapGenerator({ file }) : null
-  }
-
-  addMapping (css, mapping) {
-    const index = this.css.lastIndexOf(css) - 1
-    const position = lineColumn(this.css, index) || { line: 1, col: 0 }
-
-    this.map.addMapping({
-      source: mapping.source,
-      generated: { line: position.line, column: position.col },
-      original: { line: mapping.line, column: mapping.column }
-    })
-  }
-
-  stringify (outputFile) {
-    const pragma = `/*# sourceMappingURL=${outputFile}.map*/\n`
-
-    return {
-      css: `${this.css}\n${this.map ? pragma : ''}`,
-      map: this.map ? this.map.toString() : ''
-    }
-  }
-}
-
-// There's no documentation for this so just be a mimic...
-// <https://github.com/webpack/webpack-sources/blob/master/lib/RawSource.js>
-class RawSource {
-  constructor (value) {
-    this._value = value
-  }
-
-  source () {
-    return this._value
-  }
-
-  size () {
-    return this._value.length
-  }
-}
-
 function apply (options, compiler) {
-  compiler.hooks.emit.tap('ExtractCssBlockPlugin', (compilation, callback) => {
+  compiler.hooks.emit.tap('ExtractCssBlockPlugin', (compilation) => {
     // bail if there have been any errors
     if (compilation.errors.length) {
-      return callback()
+      return
     }
 
     const files = Object.keys(compilation.assets).filter(
@@ -87,7 +44,7 @@ function apply (options, compiler) {
         if (blocks.hasOwnProperty(filename)) {
           return blocks[filename]
         } else {
-          return blocks[filename] = new Block(filename, hasMap)
+          return blocks[filename] = new CSSBlock(filename, hasMap)
         }
       }
 
