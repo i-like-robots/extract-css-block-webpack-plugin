@@ -1,84 +1,71 @@
-const path = require('path')
-const crypto = require('crypto')
 const cssParser = require('css')
 const lineColumn = require('line-column')
 const CSSBlock = require('./lib/CSSBlock')
 const RawSource = require('./lib/RawSource')
+const contentHash = require('./lib/contentHash')
+const formatFilename = require('./lib/formatFilename')
 const { SourceMapConsumer } = require('source-map')
 
 const DELIMITER = /^!\s?(start|end):([\w_\-.]+\.css)\s?$/
 const SOURCEMAP = /^# sourceMappingURL=[\w_\-.]+\.css\.map/
 
 function apply (options, compiler) {
-  compiler.hooks.emit.tap('ExtractCssBlockPlugin', (compilation) => {
+  compiler.hooks.emit.tap('ExtractCSSBlockPlugin', (compilation) => {
     // bail if there have been any errors
     if (compilation.errors.length) {
       return
     }
 
-    const files = Object.keys(compilation.assets).filter(
+    const cssFiles = Object.keys(compilation.assets).filter(
       filename => options.match.test(filename)
     )
 
-    files.forEach(file => {
-      let hasMap = compilation.assets.hasOwnProperty(`${file}.map`)
+    const hashFunction = contentHash(compilation.outputOptions)
 
-      const rawCss = compilation.assets[file].source()
-      const rawMap = hasMap ? compilation.assets[`${file}.map`].source() : null
+    cssFiles.forEach(cssFile => {
+      const hasMapFile = compilation.assets.hasOwnProperty(`${cssFile}.map`)
 
-      const parsedCss = cssParser.parse(rawCss, { silent: true })
-      const parsedMap = rawMap ? new SourceMapConsumer(rawMap) : null
+      const rawCSSFile = compilation.assets[cssFile].source()
+      const rawMapFile = hasMapFile ? compilation.assets[`${cssFile}.map`].source() : null
 
-      if (parsedCss.stylesheet.parsingErrors.length) {
-        const error = parsedCss.stylesheet.parsingErrors.shift()
+      const parsedCSSFile = cssParser.parse(rawCSSFile, { silent: true })
+      const parsedMapFile = rawMapFile ? new SourceMapConsumer(rawMapFile) : null
+
+      if (parsedCSSFile.stylesheet.parsingErrors.length) {
+        const error = parsedCSSFile.stylesheet.parsingErrors.shift()
 
         compilation.errors.push(
-          new Error(`Error parsing ${file}: ${error.reason}, line=${error.line}`)
+          new Error(`Error parsing ${cssFile}: ${error.reason}, line=${error.line}`)
         )
       }
 
-      const blocks = {}
+      const outputBlocks = {}
       const stack = []
 
-      function getBlock (filename) {
-        if (blocks.hasOwnProperty(filename)) {
-          return blocks[filename]
+      function getBlock(cssFile) {
+        if (outputBlocks.hasOwnProperty(cssFile)) {
+          return outputBlocks[cssFile]
         } else {
-          return blocks[filename] = new CSSBlock(filename, hasMap)
+          return outputBlocks[cssFile] = new CSSBlock(cssFile, hasMapFile)
         }
       }
 
-      function extractCss (rule) {
-        return rawCss.slice(
-          lineColumn(rawCss).toIndex(rule.position.start),
-          lineColumn(rawCss).toIndex(rule.position.end)
+      function extractCSS(rule) {
+        return rawCSSFile.slice(
+          lineColumn(rawCSSFile).toIndex(rule.position.start),
+          lineColumn(rawCSSFile).toIndex(rule.position.end)
         )
       }
 
-      function addMapping (css, rule) {
-        const mapping = parsedMap.originalPositionFor(rule.position.start)
+      function addMapping(css, rule) {
+        const mapping = parsedMapFile.originalPositionFor(rule.position.start)
         context.addMapping(css, mapping)
       }
 
-      function formatFilename (format, filename, contents) {
-        const { hashFunction, hashDigest, hashDigestLength } = compilation.outputOptions
-
-        let output = format.replace('[name]', path.basename(filename, '.css'))
-
-        if (format.includes('[contenthash]')) {
-          const hash = crypto.createHash(hashFunction).update(contents)
-          const digest = hash.digest(hashDigest).substring(0, hashDigestLength)
-
-          output = output.replace('[contenthash]', digest)
-        }
-
-        return output
-      }
-
-      let context = getBlock(file)
+      let context = getBlock(cssFile)
       stack.push(context)
 
-      parsedCss.stylesheet.rules.forEach(rule => {
+      parsedCSSFile.stylesheet.rules.forEach(rule => {
         if (rule.type === 'comment' && DELIMITER.test(rule.comment)) {
           const matches = rule.comment.match(DELIMITER)
           const type = matches[1]
@@ -106,16 +93,16 @@ function apply (options, compiler) {
           return
         }
 
-        const css = extractCss(rule)
+        const css = extractCSS(rule)
         context.css += css
 
         // translate existing source map to the new target
-        if (hasMap) {
+        if (hasMapFile) {
           addMapping(css, rule)
 
           // add mappings for any rulesets inside a media query
           rule.type === 'media' && rule.rules.forEach(child => {
-            addMapping(extractCss(child), child)
+            addMapping(extractCSS(child), child)
           })
         }
       })
@@ -126,17 +113,17 @@ function apply (options, compiler) {
         )
       }
 
-      Object.keys(blocks).forEach(filename => {
-        const block = blocks[filename]
+      Object.keys(outputBlocks).forEach(cssFile => {
+        const block = outputBlocks[cssFile]
 
         // append original sources to map where necessary
-        block.map && parsedMap.sources.forEach(source => {
+        block.map && parsedMapFile.sources.forEach(source => {
           if (block.map && block.map._sources.has(source)) {
-            block.map.setSourceContent(source, parsedMap.sourceContentFor(source))
+            block.map.setSourceContent(source, parsedMapFile.sourceContentFor(source))
           }
         })
 
-        const outputFile = formatFilename(options.filename, block.file, block.css)
+        const outputFile = formatFilename(options.filename, block.file, block.css, hashFunction)
         const result = block.stringify(outputFile)
 
         // remove old file from the compilation so we may rehash it
